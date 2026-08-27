@@ -1,0 +1,24 @@
+[project]
+name = "agent-py"
+version = "0.1.0"
+description = "客服 Agent 后端（由 ai-langchain4j-agent 迁移的 Python 版本）"
+requires-python = ">=3.12"
+dependencies = [
+    # Web 框架 + ASGI 服务器
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    # LangChain 核心 + OpenAI 兼容聊天模型 + Qdrant 向量库 + 文本切分
+    "langchain-core>=0.3",
+    "langchain-openai>=0.2",
+    "langchain-qdrant>=0.1",
+    "langchain-text-splitters>=0.3",
+    # 本地 ONNX 向量模型（bge-small-zh）
+    "onnxruntime>=1.19",
+    "tokenizers>=0.19",
+    # MongoDB 异步驱动 + Redis 客户端
+    "motor>=3.5",
+    "redis>=5.0",
+    # 配置管理
+    "pydantic>=2.8",
+    "pydantic-settings>=2.4",
+]

@@ -1,0 +1,17 @@
+# 虚拟环境
+.venv/
+venv/
+
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# 本地配置（含密钥）
+.env
+
+# IDE
+.idea/
+
+# uv 锁文件（可选，按需放开）
+# uv.lock
