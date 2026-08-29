@@ -7,8 +7,6 @@ import logging
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
-from app.services.redis_memory import RedisChatMemoryStore
-
 logger = logging.getLogger(__name__)
 
 # 系统提示词：与旧版 ProductConsultAgent 的 @SystemMessage 一致
@@ -18,64 +16,65 @@ _SYSTEM_PROMPT = "产品咨询客服，给客户提供产品信息，回答要�
 class ProductConsultAgent:
     """回答产品 / 业务咨询，需要时调用工具（如手机价格查询）。"""
 
-    def __init__(self, chat_model, retriever, memory_store: RedisChatMemoryStore, phone_price_tool):
+    def __init__(self, chat_model, retriever, memory_store, tools):
         self._chat_model = chat_model
         self._retriever = retriever
         self._memory_store = memory_store
-        # 绑定工具：模型可在回答过程中选择调用 phone_price_tool
-        self._model_with_tools = chat_model.bind_tools([phone_price_tool])
-        # 保存工具映射，便于根据工具名执行
-        self._tools_by_name = {phone_price_tool.name: phone_price_tool}
+        self._tools = tools or []
+        # 有工具就绑定，让模型回答过程中可以调用；没有就当成普通聊天
+        self._model = chat_model.bind_tools(self._tools) if self._tools else chat_model
+        self._tools_by_name = {t.name: t for t in self._tools}
 
     async def answer(self, conversation_id: str, user_query: str) -> str:
         """处理一轮产品咨询，返回最终回答文本。"""
-
-        # 1. 从 Redis 加载历史会话（滑动窗口）
+        # 1. 读取历史会话
         history = await self._memory_store.get_messages(conversation_id)
-        logger.info("[产品咨询] 加载历史：conversationId=%s, 历史条数=%d", conversation_id, len(history))
 
-        # 2. RAG 检索相关知识片段
-        try:
-            docs = await self._retriever.ainvoke(user_query)
-            context = "\n\n".join(d.page_content for d in docs) if docs else ""
-            logger.info("[产品咨询] RAG 检索命中 %d 条知识片段", len(docs))
-        except Exception:
-            logger.exception("RAG 检索失败，忽略上下文继续回答")
-            context = ""
+        # 2. RAG 检索知识片段
+        context = await self._retrieve(user_query)
 
-        # 3. 组装消息：系统提示词（含知识库上下文） -> 历史 -> 当前问题
-        system_text = _SYSTEM_PROMPT
-        if context:
-            system_text += f"\n\n可参考的产品信息：\n{context}"
-
-        messages = [SystemMessage(content=system_text)]
+        # 3. 组装消息：系统提示词（含知识上下文） -> 历史 -> 当前问题
+        messages = [SystemMessage(content=self._system_prompt(context))]
         for m in history:
-            if m.role == "user":
-                messages.append(HumanMessage(content=m.content))
-            else:
-                messages.append(AIMessage(content=m.content))
+            messages.append(
+                HumanMessage(content=m.content) if m.role == "user" else AIMessage(content=m.content)
+            )
         messages.append(HumanMessage(content=user_query))
 
-        # 4. 调用模型；若模型请求调用工具，则执行工具后再次调用
-        response = await self._model_with_tools.ainvoke(messages)
+        # 4. 调用模型；若模型请求调用工具，执行工具后把结果回传，再让模型生成最终回答
+        response = await self._model.ainvoke(messages)
         while response.tool_calls:
             messages.append(response)
-            for tool_call in response.tool_calls:
-                # tool_call 是一个 dict，含 name / args / id（不同版本键名可能略有差异，做兜底）
-                name = tool_call.get("name")
-                args = tool_call.get("args", {})
-                call_id = tool_call.get("id") or tool_call.get("tool_call_id") or ""
+            for call in response.tool_calls:
+                result = await self._execute_tool(call)
+                messages.append(ToolMessage(content=str(result), tool_call_id=call.get("id", "")))
+            response = await self._model.ainvoke(messages)
 
-                tool = self._tools_by_name.get(name)
-                logger.info("[产品咨询] 模型请求调用工具：name=%s, args=%s", name, args)
-                if tool is None:
-                    result = "未知工具"
-                else:
-                    result = await tool.ainvoke(args)
-                    if result is None:
-                        result = "未查询到该手机的价格"
-                messages.append(ToolMessage(content=str(result), tool_call_id=call_id))
-            response = await self._model_with_tools.ainvoke(messages)
-
-        # 5. 返回纯文本回答
         return response.content or ""
+
+    @staticmethod
+    def _system_prompt(context: str) -> str:
+        """把检索到的上下文拼进系统提示词；没有上下文时只返回基础提示词。"""
+        if not context:
+            return _SYSTEM_PROMPT
+        return f"{_SYSTEM_PROMPT}\n\n参考以下产品信息回答：\n{context}"
+
+    async def _retrieve(self, user_query: str) -> str:
+        """RAG 检索；失败时返回空上下文，不影响正常回答。"""
+        try:
+            docs = await self._retriever.ainvoke(user_query)
+            logger.info("[产品咨询] RAG 检索命中 %d 条知识片段", len(docs))
+            return "\n\n".join(d.page_content for d in docs)
+        except Exception:
+            logger.exception("RAG 检索失败，忽略上下文继续回答")
+            return ""
+
+    async def _execute_tool(self, call: dict) -> str:
+        """执行一次工具调用，返回结果文本。"""
+        name = call.get("name")
+        args = call.get("args", {})
+        tool = self._tools_by_name.get(name)
+        if tool is None:
+            return f"工具 {name} 不存在"
+        result = await tool.ainvoke(args)
+        return "未查询到该手机的价格" if result is None else str(result)

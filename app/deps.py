@@ -6,16 +6,13 @@
 
 import logging
 
-
 from langchain_openai import ChatOpenAI
 from motor.motor_asyncio import AsyncIOMotorClient
 from redis.asyncio import Redis
 from pydantic import SecretStr
 
-from app.config import Settings, get_settings, resolve_path
-from app.rag.embeddings import BgeOnnxEmbeddings
+from app.config import Settings, get_settings
 from app.rag.vector_store import (
-    build_qdrant_client,
     build_retriever,
     build_vector_store,
 )
@@ -47,7 +44,7 @@ def build_workflow(deps: "Deps") -> CustomerServiceWorkflow:
     """组装客服工作流及其各个分支 Agent（意图识别 / 产品咨询 / 订单 / 投诉）。"""
     intent_classifier = IntentClassifier(deps.chat_model)
     product_consult_agent = ProductConsultAgent(
-        deps.chat_model, deps.retriever, deps.memory_store, query_last_year_min_price
+        deps.chat_model, deps.retriever, deps.memory_store, [query_last_year_min_price]
     )
     order_agent = OrderAgent(deps.chat_model)
     complaint_agent = ComplaintAgent(deps.chat_model)
@@ -90,14 +87,7 @@ class Deps:
         # ---------- 大模型 ----------
         self.chat_model = build_chat_model(settings)
 
-        # ---------- RAG：本地向量模型 + Qdrant + 检索器 ----------
-        self.embeddings = BgeOnnxEmbeddings(
-            model_path=resolve_path(settings.embedding_model_path),
-            tokenizer_path=resolve_path(settings.embedding_tokenizer_path),
-            pooling_mode=settings.embedding_pooling_mode,
-        )
-        self.qdrant_client = build_qdrant_client(settings)
-        self.vector_store = build_vector_store(self.qdrant_client, self.embeddings, settings)
+        self.vector_store = build_vector_store(settings)
         self.retriever = build_retriever(self.vector_store)
 
         # ---------- 工作流与 AI 服务 ----------

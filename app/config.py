@@ -52,20 +52,17 @@ class Settings(BaseSettings):
     # 注意：这里走 HTTP REST 接口（默认 6333）。
     # Qdrant 的 gRPC 端口是 6334，但新版 qdrant-client 走 gRPC 与 Qdrant 1.16 存在兼容问题，
     # 故统一使用 HTTP，更稳定。
-    qdrant_host: str = "localhost"
-    qdrant_port: int = 6333
-    qdrant_use_tls: bool = False
-    qdrant_api_key: str = ""
-    qdrant_collection_name: str = "bge_small_zh_512"
+    qdrant_url: str = "localhost:6334"
+    qdrant_collection_name: str = "bge-small-zh-v1.5"
+
     # 检索阈值：旧项目写的是 0.8，但实测相关结果余弦分数约 0.80（刚好卡在边界），
     # 0.8 会把最相关的结果也过滤掉，这里默认放宽到 0.7 让检索可用。
     qdrant_min_score: float = 0.7
     qdrant_max_results: int = 5
 
-    # ---------- 本地 ONNX 向量模型（bge-small-zh） ----------
-    embedding_model_path: str = "resources/onnx/bge-small-zh/bge-small-zh-v1.5.onnx"
-    embedding_tokenizer_path: str = "resources/onnx/bge-small-zh/bge-small-zh-v1.5-tokenizer.json"
-    embedding_pooling_mode: str = "CLS"
+    # ---------- 向量模型（bge-small-zh，通过 HuggingFaceEmbeddings 加载） ----------
+    # 可填 HuggingFace 模型 ID（首次会自动下载），或本地已下载的模型目录路径
+    embedding_model_path: str = "BAAI/bge-small-zh-v1.5"
 
     # 让 pydantic-settings 自动读取项目根目录下的 .env 文件（环境变量优先）
     model_config = SettingsConfigDict(

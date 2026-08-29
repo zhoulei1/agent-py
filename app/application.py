@@ -31,7 +31,7 @@ def create_app() -> FastAPI:
 
         # 知识库入库（Qdrant 未就绪 / 模型未放置时只告警，不阻止启动）
         try:
-            ingest_knowledge_base(deps.qdrant_client, deps.vector_store, deps.settings)
+            ingest_knowledge_base(deps.vector_store, deps.settings)
             logger.info("[启动] 知识库入库完成")
         except Exception:
             logger.exception(

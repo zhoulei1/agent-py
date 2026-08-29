@@ -3,8 +3,6 @@
 存储约定：
     key   = "chat:memory:{conversationId}"
     value = json 字符串，形如 [{"role":"user","content":"..."}, {"role":"assistant","content":"..."}]
-
-只保留最近 N 条消息（滑动窗口），与旧项目 MessageWindowChatMemory.maxMessages(3) 对应。
 """
 
 import json
