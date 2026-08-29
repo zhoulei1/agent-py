@@ -9,6 +9,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from app.workflow.intents import Intent
+from app.workflow.llm_logger import llm_logging_handler
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,9 @@ class IntentClassifier:
         messages = self._prompt.format_messages(user_query=user_query)
 
         try:
-            result: IntentResult = await self._structured_model.ainvoke(messages)
+            result: IntentResult = await self._structured_model.ainvoke(
+                messages, config={"callbacks": [llm_logging_handler]}
+            )
             intent = Intent.parse(result.intent.value)
             logger.info("[意图识别] 输入=%s -> intent=%s", user_query, intent.value)
             return intent

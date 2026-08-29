@@ -9,6 +9,7 @@ import re
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from app.models import OrderDTO
+from app.workflow.llm_logger import llm_logging_handler
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ class OrderAgent:
         # 3. 用 LLM 把订单信息整理成客服话术
         prompt = f"用户问题：{user_query}，订单信息：{order.model_dump_json()}"
         response = await self._chat_model.ainvoke(
-            [SystemMessage(content=_SYSTEM_PROMPT), HumanMessage(content=prompt)]
+            [SystemMessage(content=_SYSTEM_PROMPT), HumanMessage(content=prompt)],
+            config={"callbacks": [llm_logging_handler]},
         )
         return response.content or ""
 

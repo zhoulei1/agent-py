@@ -4,6 +4,8 @@ import logging
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from app.workflow.llm_logger import llm_logging_handler
+
 logger = logging.getLogger(__name__)
 
 # 系统提示词：与旧版 ComplaintAgent 的 @SystemMessage 一致
@@ -22,6 +24,7 @@ class ComplaintAgent:
             [
                 SystemMessage(content=_SYSTEM_PROMPT),
                 HumanMessage(content=f"用户投诉：{user_query}"),
-            ]
+            ],
+            config={"callbacks": [llm_logging_handler]},
         )
         return response.content or ""

@@ -7,6 +7,8 @@ import logging
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
+from app.workflow.llm_logger import llm_logging_handler
+
 logger = logging.getLogger(__name__)
 
 # 系统提示词：与旧版 ProductConsultAgent 的 @SystemMessage 一致
@@ -42,13 +44,13 @@ class ProductConsultAgent:
         messages.append(HumanMessage(content=user_query))
 
         # 4. 调用模型；若模型请求调用工具，执行工具后把结果回传，再让模型生成最终回答
-        response = await self._model.ainvoke(messages)
+        response = await self._model.ainvoke(messages, config={"callbacks": [llm_logging_handler]})
         while response.tool_calls:
             messages.append(response)
             for call in response.tool_calls:
                 result = await self._execute_tool(call)
                 messages.append(ToolMessage(content=str(result), tool_call_id=call.get("id", "")))
-            response = await self._model.ainvoke(messages)
+            response = await self._model.ainvoke(messages, config={"callbacks": [llm_logging_handler]})
 
         return response.content or ""
 
