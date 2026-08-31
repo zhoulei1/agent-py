@@ -12,6 +12,8 @@ dependencies = [
     "langchain-openai>=0.2",
     "langchain-qdrant>=0.1",
     "langchain-text-splitters>=0.3",
+    # 工作流编排（LangGraph）
+    "langgraph>=0.2",
     # 本地 ONNX 向量模型（bge-small-zh）
     "onnxruntime>=1.19",
     "tokenizers>=0.19",
