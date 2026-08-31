@@ -1,0 +1,371 @@
+/* ============================================================
+   全局样式：reset + 主题变量 + Markdown 排版 + 代码高亮
+   主题通过 html[data-theme] 切换，由 stores/theme.ts 写入
+   ============================================================ */
+
+:root {
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, ui-monospace,
+    monospace;
+
+  --content-width: 768px;
+  --sidebar-width: 260px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+}
+
+/* ---------- 亮色（默认，对齐 DeepSeek 官网） ---------- */
+:root,
+html[data-theme='light'] {
+  --app-bg: #ffffff;
+  --sidebar-bg: #f9fbff;
+  --sidebar-hover: #eceff5;
+  --sidebar-active: #dbe3fb;
+  --header-bg: rgba(255, 255, 255, 0.85);
+
+  --text-primary: #16181d;
+  --text-secondary: #6b7280;
+  --text-tertiary: #9ca3af;
+
+  --border: #e6e8eb;
+  --border-strong: #d5d8dd;
+
+  --accent: #4d6bfe;
+  --accent-hover: #3f5ae8;
+  --accent-soft: rgba(77, 107, 254, 0.1);
+
+  --user-bubble: #eff6ff;
+  --user-bubble-text: #16181d;
+
+  --code-bg: #f6f8fa;
+  --code-header-bg: #eceff3;
+  --inline-code-bg: rgba(77, 107, 254, 0.1);
+  --inline-code-text: #3f5ae8;
+
+  --danger: #e5484d;
+  --input-bg: #ffffff;
+  --shadow-lg: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+/* ---------- 暗色 ---------- */
+html[data-theme='dark'] {
+  --app-bg: #292a2d;
+  --sidebar-bg: #1f2023;
+  --sidebar-hover: #2f3033;
+  --sidebar-active: #3a3d47;
+  --header-bg: rgba(41, 42, 45, 0.85);
+
+  --text-primary: #ececec;
+  --text-secondary: #a1a3ab;
+  --text-tertiary: #7b7d85;
+
+  --border: #37383c;
+  --border-strong: #47484d;
+
+  --accent: #7c8ffb;
+  --accent-hover: #93a3fc;
+  --accent-soft: rgba(124, 143, 251, 0.16);
+
+  --user-bubble: #3a3d47;
+  --user-bubble-text: #ececec;
+
+  --code-bg: #1b1c1f;
+  --code-header-bg: #232427;
+  --inline-code-bg: rgba(124, 143, 251, 0.18);
+  --inline-code-text: #b4bffd;
+
+  --danger: #ff6369;
+  --input-bg: #303134;
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--app-bg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- 滚动条 ---------- */
+.scroll-y {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.scroll-y::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scroll-y::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll-y::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+.scroll-y::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* ============================================================
+   Markdown 正文排版
+   ============================================================ */
+
+.markdown-body {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-body p {
+  margin: 0 0 12px;
+}
+
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4 {
+  margin: 22px 0 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.markdown-body h1 {
+  font-size: 1.5em;
+}
+.markdown-body h2 {
+  font-size: 1.3em;
+}
+.markdown-body h3 {
+  font-size: 1.15em;
+}
+.markdown-body h4 {
+  font-size: 1em;
+}
+
+.markdown-body ul,
+.markdown-body ol {
+  margin: 12px 0;
+  padding-left: 24px;
+}
+
+.markdown-body li {
+  margin: 6px 0;
+}
+
+.markdown-body li > p {
+  margin: 0 0 6px;
+}
+
+.markdown-body a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.markdown-body a:hover {
+  text-decoration: underline;
+}
+
+.markdown-body blockquote {
+  margin: 12px 0;
+  padding: 4px 0 4px 14px;
+  border-left: 3px solid var(--accent);
+  color: var(--text-secondary);
+}
+
+.markdown-body hr {
+  margin: 20px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.markdown-body img {
+  max-width: 100%;
+  border-radius: var(--radius-sm);
+}
+
+/* 表格 */
+.markdown-body table {
+  width: 100%;
+  margin: 14px 0;
+  border-collapse: collapse;
+  font-size: 14px;
+  display: block;
+  overflow-x: auto;
+}
+
+.markdown-body th,
+.markdown-body td {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.markdown-body th {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+/* 行内代码 */
+.markdown-body :not(pre) > code {
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--inline-code-bg);
+  color: var(--inline-code-text);
+  font-family: var(--mono);
+  font-size: 0.88em;
+}
+
+/* 代码块 */
+.markdown-body pre {
+  margin: 14px 0;
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.markdown-body pre code {
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1.6;
+  background: none;
+  padding: 0;
+  color: var(--text-primary);
+}
+
+/* 代码块外壳（由 MarkdownRenderer 在渲染后增强生成） */
+.markdown-body .md-code-block {
+  margin: 14px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.markdown-body .md-code-block > pre {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+}
+
+.md-code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--code-header-bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: var(--mono);
+}
+
+.md-copy-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-family: var(--sans);
+  transition: all 0.15s;
+}
+
+.md-copy-btn:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ============================================================
+   highlight.js token 配色（跟随主题变量，无需引入两套主题 CSS）
+   ============================================================ */
+
+html[data-theme='light'] .hljs-comment,
+html[data-theme='light'] .hljs-quote {
+  color: #6a737d;
+  font-style: italic;
+}
+html[data-theme='light'] .hljs-keyword,
+html[data-theme='light'] .hljs-selector-tag,
+html[data-theme='light'] .hljs-literal,
+html[data-theme='light'] .hljs-type {
+  color: #d73a49;
+}
+html[data-theme='light'] .hljs-string,
+html[data-theme='light'] .hljs-regexp {
+  color: #032f62;
+}
+html[data-theme='light'] .hljs-number,
+html[data-theme='light'] .hljs-built_in {
+  color: #005cc5;
+}
+html[data-theme='light'] .hljs-title,
+html[data-theme='light'] .hljs-section {
+  color: #6f42c1;
+}
+html[data-theme='light'] .hljs-attr,
+html[data-theme='light'] .hljs-attribute,
+html[data-theme='light'] .hljs-variable {
+  color: #e36209;
+}
+
+html[data-theme='dark'] .hljs-comment,
+html[data-theme='dark'] .hljs-quote {
+  color: #8b949e;
+  font-style: italic;
+}
+html[data-theme='dark'] .hljs-keyword,
+html[data-theme='dark'] .hljs-selector-tag,
+html[data-theme='dark'] .hljs-literal,
+html[data-theme='dark'] .hljs-type {
+  color: #ff7b72;
+}
+html[data-theme='dark'] .hljs-string,
+html[data-theme='dark'] .hljs-regexp {
+  color: #a5d6ff;
+}
+html[data-theme='dark'] .hljs-number,
+html[data-theme='dark'] .hljs-built_in {
+  color: #79c0ff;
+}
+html[data-theme='dark'] .hljs-title,
+html[data-theme='dark'] .hljs-section {
+  color: #d2a8ff;
+}
+html[data-theme='dark'] .hljs-attr,
+html[data-theme='dark'] .hljs-attribute,
+html[data-theme='dark'] .hljs-variable {
+  color: #ffa657;
+}

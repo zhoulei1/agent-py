@@ -1,0 +1,32 @@
+{
+  "name": "agent-front",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc -b",
+    "test:sse": "node --test src/transport/sseParser.test.mjs"
+  },
+  "dependencies": {
+    "@vicons/ionicons5": "^0.13.0",
+    "dompurify": "^3.4.14",
+    "highlight.js": "^11.12.0",
+    "marked": "^18.0.11",
+    "naive-ui": "^2.45.2",
+    "pinia": "^3.0.4",
+    "socket.io-client": "^4.8.3",
+    "vue": "^3.5.41",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/tsconfig": "^0.9.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2",
+    "vue-tsc": "^3.3.11"
+  }
+}
