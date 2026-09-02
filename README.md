@@ -22,10 +22,10 @@
 用户提问
    │
    ▼
-意图识别（LLM 结构化输出）
-   ├─ PRODUCT_CONSULT ─► 产品咨询：RAG 检索 + 历史记忆 + 工具调用
-   ├─ QUERY_ORDER     ─► 订单查询：提取订单号 → 查询订单 → 生成话术
-   ├─ COMPLAINT       ─► 售后投诉：安抚情绪 + 受理话术
+意图识别 + 参数提取（LLM 结构化输出：意图 + order_no / complaint）
+   ├─ PRODUCT_CONSULT ─► 产品咨询：RAG + 记忆 + 工具（回答已润色，直接返回）
+   ├─ QUERY_ORDER     ─► 订单查询：提取订单号 → 查询订单 → 润色话术
+   ├─ COMPLAINT       ─► 售后投诉：提取投诉要点 → 润色受理话术
    └─ UNKNOWN / 其它  ─► 兜底提示重新输入
    │
    ▼
@@ -35,9 +35,42 @@
 单轮对话完整链路：
 
 1. 用户消息写入 MongoDB
-2. 工作流处理（LangGraph：意图识别 → 条件边分发 → 分支 Agent）
+2. 工作流处理（LangGraph：意图识别 + 参数提取 → 条件边分发 → 分支 Agent → 润色兜底）
 3. AI 回复写入 MongoDB
 4. 产品咨询分支的对话历史写入 Redis（滑动窗口，最多保留 3 条）
+
+### 产品咨询时序图
+
+```mermaid
+sequenceDiagram
+    participant U as 用户
+    participant F as 前端 agent-front
+    participant S as AiService
+    participant W as CustomerServiceWorkflow
+    participant R as IntentRecognizer
+    participant P as ProductConsultAgent
+    participant C as Redis
+    participant Q as Qdrant
+    participant L as LLM(Qwen)
+
+    U->>F: 发送产品咨询
+    F->>S: POST /ai/streamChat (SSE)
+    S->>W: chat(conversationId, query, userId)
+    W->>R: recognize(query)
+    R->>L: 意图识别 + 参数提取
+    L-->>R: PRODUCT_CONSULT
+    W->>P: answer(conversationId, query)
+    P->>C: 读取历史记忆
+    C-->>P: 历史消息
+    P->>Q: RAG 检索（MMR）
+    Q-->>P: 相关知识片段
+    P->>L: 生成回答（可调用工具）
+    L-->>P: 回答文本
+    P-->>W: answer
+    W-->>S: 最终回答
+    S-->>F: SSE 返回
+    F-->>U: 展示回答
+```
 
 ## 技术架构
 
@@ -59,6 +92,8 @@ app/
 
 - **组合根模式**：所有依赖在 `deps.py` 一处创建，业务代码只取用
 - **LangGraph 状态图**：`意图识别 → 条件边` 表达多分支路由，语义清晰可扩展
+- **意图识别 + 参数提取**：LLM 结构化输出一次得到意图与参数（order_no / complaint），供分支 Agent 直接使用
+- **润色兜底**：统一的润色节点（`ReplyPolisher`）复用，未知意图走兜底提示
 - **RAG**：本地向量化 + Qdrant MMR 检索（兼顾相关性与多样性）
 - **LLM 交互日志**：LangChain 回调统一记录每次请求与返回，便于调试
 - **工具调用**：产品咨询分支可调用工具（如手机价格查询）
@@ -86,11 +121,11 @@ agent-py/
     │   └── init.txt                # 知识库文本
     └── workflow/               # 工作流
         ├── customer_service.py     # LangGraph 编排入口
-        ├── intent_classifier.py    # 意图识别
+        ├── intent_recognizer.py    # 意图识别 + 参数提取
+        ├── reply_polisher.py       # 回复润色 + 兜底提示（可复用）
         ├── intents.py              # 意图枚举
         ├── product_consult.py      # 产品咨询 Agent（RAG + 记忆 + 工具）
-        ├── order.py                # 订单 Agent
-        ├── complaint.py            # 售后投诉 Agent
+        ├── order.py                # 订单 Agent（纯逻辑：提取订单号 + 查询）
         ├── tools.py                # 工具定义
         └── llm_logger.py           # LLM 交互日志回调
 ```

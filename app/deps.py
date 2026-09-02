@@ -20,11 +20,11 @@ from app.services.ai_service import AiService
 from app.services.chat_message_service import ChatMessageService
 from app.services.conversation_service import ConversationService
 from app.services.redis_memory import RedisChatMemoryStore
-from app.workflow.complaint import ComplaintAgent
 from app.workflow.customer_service import CustomerServiceWorkflow
-from app.workflow.intent_classifier import IntentClassifier
+from app.workflow.intent_recognizer import IntentRecognizer
 from app.workflow.order import OrderAgent
 from app.workflow.product_consult import ProductConsultAgent
+from app.workflow.reply_polisher import ReplyPolisher
 from app.workflow.tools import query_last_year_min_price
 
 logger = logging.getLogger(__name__)
@@ -41,19 +41,19 @@ def build_chat_model(settings: Settings) -> ChatOpenAI:
 
 
 def build_workflow(deps: "Deps") -> CustomerServiceWorkflow:
-    """组装客服工作流及其各个分支 Agent（意图识别 / 产品咨询 / 订单 / 投诉）。"""
-    intent_classifier = IntentClassifier(deps.chat_model)
+    """组装客服工作流及其各个分支 Agent（意图识别 / 产品咨询 / 订单 / 润色兜底）。"""
+    intent_recognizer = IntentRecognizer(deps.chat_model)
     product_consult_agent = ProductConsultAgent(
         deps.chat_model, deps.retriever, deps.memory_store, [query_last_year_min_price]
     )
-    order_agent = OrderAgent(deps.chat_model)
-    complaint_agent = ComplaintAgent(deps.chat_model)
+    order_agent = OrderAgent()
+    polisher = ReplyPolisher(deps.chat_model)
 
     return CustomerServiceWorkflow(
-        intent_classifier=intent_classifier,
+        intent_recognizer=intent_recognizer,
         product_consult_agent=product_consult_agent,
         order_agent=order_agent,
-        complaint_agent=complaint_agent,
+        polisher=polisher,
         memory_store=deps.memory_store,
     )
 
