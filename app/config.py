@@ -18,8 +18,6 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 def resolve_path(path: str) -> str:
     """把配置里的相对路径解析为基于项目根目录的绝对路径（返回字符串）。
-
-    例如 "resources/embedding/init.txt" -> "D:/gitwork/agent-py/resources/embedding/init.txt"。
     已经是绝对路径时原样返回。
     """
     p = Path(path)
@@ -63,6 +61,10 @@ class Settings(BaseSettings):
     # ---------- 向量模型（bge-small-zh，通过 HuggingFaceEmbeddings 加载） ----------
     # 可填 HuggingFace 模型 ID（首次会自动下载），或本地已下载的模型目录路径
     embedding_model_path: str = "BAAI/bge-small-zh-v1.5"
+
+    # ---------- BM25 稀疏向量模型（关键词检索） ----------
+    # 本地模型目录：从 https://huggingface.co/Qdrant/bm25 下载整个仓库放到这里
+    bm25_model_path: str = "D:/gitwork/bm25"
 
     # 让 pydantic-settings 自动读取项目根目录下的 .env 文件（环境变量优先）
     model_config = SettingsConfigDict(

@@ -27,4 +27,10 @@ dependencies = [
     "langchain-huggingface>=1.2.2",
     "qdrant-client>=1.19.0",
     "sentence-transformers>=6.0.0",
+    # 混合检索的稀疏向量模型（BM25 关键词检索）
+    "fastembed>=0.5",
+    # 文档加载（测试里从 docx / pdf 读取知识库）
+    "docx2txt>=0.8",
+    "pypdf>=4.0",
+    "akshare>=1.18.94",
 ]

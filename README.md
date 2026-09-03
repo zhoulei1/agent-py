@@ -9,7 +9,7 @@
 | Web 框架 | FastAPI + Uvicorn（SSE 流式接口） |
 | 大模型 | LangChain + OpenAI 兼容接口（Qwen / DeepSeek） |
 | 工作流编排 | LangGraph（StateGraph 状态图） |
-| 检索增强 RAG | HuggingFaceEmbeddings（bge-small-zh-v1.5）+ Qdrant（MMR 重排） |
+| 检索增强 RAG | HuggingFaceEmbeddings（bge-small-zh-v1.5）+ Qdrant 混合检索（稠密 + BM25 稀疏，RRF 融合） |
 | 会话记忆 | Redis（滑动窗口） |
 | 持久化 | MongoDB（motor 异步驱动） |
 | 配置管理 | pydantic-settings（.env） |
@@ -62,7 +62,7 @@ sequenceDiagram
     W->>P: answer(conversationId, query)
     P->>C: 读取历史记忆
     C-->>P: 历史消息
-    P->>Q: RAG 检索（MMR）
+    P->>Q: RAG 混合检索（稠密 + 稀疏，RRF）
     Q-->>P: 相关知识片段
     P->>L: 生成回答（可调用工具）
     L-->>P: 回答文本
@@ -94,7 +94,7 @@ app/
 - **LangGraph 状态图**：`意图识别 → 条件边` 表达多分支路由，语义清晰可扩展
 - **意图识别 + 参数提取**：LLM 结构化输出一次得到意图与参数（order_no / complaint），供分支 Agent 直接使用
 - **润色兜底**：统一的润色节点（`ReplyPolisher`）复用，未知意图走兜底提示
-- **RAG**：本地向量化 + Qdrant MMR 检索（兼顾相关性与多样性）
+- **RAG 混合检索**：稠密向量（语义）+ BM25 稀疏向量（关键词），RRF 融合，兼顾「语义相近」与「关键词命中」
 - **LLM 交互日志**：LangChain 回调统一记录每次请求与返回，便于调试
 - **工具调用**：产品咨询分支可调用工具（如手机价格查询）
 
@@ -117,7 +117,7 @@ agent-py/
     │   ├── chat_message_service.py # 消息 CRUD（MongoDB）
     │   └── redis_memory.py         # Redis 会话记忆
     ├── rag/                    # 检索增强
-    │   ├── vector_store.py         # Qdrant 向量库 + MMR 检索器 + 入库
+    │   ├── vector_store.py         # Qdrant 混合检索（稠密 + 稀疏，RRF）+ 入库
     │   └── init.txt                # 知识库文本
     └── workflow/               # 工作流
         ├── customer_service.py     # LangGraph 编排入口
