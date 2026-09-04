@@ -22,7 +22,7 @@ from app.services.conversation_service import ConversationService
 from app.services.redis_memory import RedisChatMemoryStore
 from app.workflow.customer_service import CustomerServiceWorkflow
 from app.workflow.intent_recognizer import IntentRecognizer
-from app.workflow.order import OrderAgent
+from app.workflow.order_mcp_client import OrderMCPClient
 from app.workflow.product_consult import ProductConsultAgent
 from app.workflow.reply_polisher import ReplyPolisher
 from app.workflow.tools import query_last_year_min_price
@@ -46,7 +46,7 @@ def build_workflow(deps: "Deps") -> CustomerServiceWorkflow:
     product_consult_agent = ProductConsultAgent(
         deps.chat_model, deps.retriever, deps.memory_store, [query_last_year_min_price]
     )
-    order_agent = OrderAgent()
+    order_agent = OrderMCPClient(deps.settings.order_mcp_url)
     polisher = ReplyPolisher(deps.chat_model)
 
     return CustomerServiceWorkflow(

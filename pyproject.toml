@@ -33,4 +33,5 @@ dependencies = [
     "docx2txt>=0.8",
     "pypdf>=4.0",
     "akshare>=1.18.94",
+    "mcp>=2.1.1",
 ]

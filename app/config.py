@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     # 本地模型目录：从 https://huggingface.co/Qdrant/bm25 下载整个仓库放到这里
     bm25_model_path: str = "D:/gitwork/bm25"
 
+    # ---------- 订单查询 MCP 服务（已剥离为独立服务，见 order-mcp-server/） ----------
+    # Streamable HTTP 端点地址；环境变量 ORDER_MCP_URL 可覆盖
+    order_mcp_url: str = "http://127.0.0.1:8000/mcp"
+
     # 让 pydantic-settings 自动读取项目根目录下的 .env 文件（环境变量优先）
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 _FALLBACK_ANSWER = "抱歉，暂时无法理解您的需求，请重新输入或补充更多信息。"
 
+# 订单 MCP 服务不可用时的降级文案（直接返回，不再走润色）
+_ORDER_SERVICE_UNAVAILABLE = "订单查询服务暂不可用，请稍后再试。"
+
 
 class WorkflowState(TypedDict):
     """工作流状态：节点之间传递的数据。"""
@@ -102,9 +105,16 @@ class CustomerServiceWorkflow:
         answer = await self._product_consult_agent.answer(state["conversation_id"], state["user_query"])
         return {"answer": answer or _FALLBACK_ANSWER}
 
-    def _order(self, state: WorkflowState) -> dict:
-        """查询订单（纯逻辑），结果交给润色节点。"""
-        order = self._order_agent.lookup(state["user_query"], state.get("order_no"))
+    async def _order(self, state: WorkflowState) -> dict:
+        """查询订单（调用独立订单 MCP 服务），结果交给润色节点。
+
+        订单服务不可用时降级为兜底文案，不中断整个工作流。
+        """
+        try:
+            order = await self._order_agent.lookup(state["user_query"], state.get("order_no"))
+        except Exception:
+            logger.warning("[工作流] 订单 MCP 服务调用失败，降级为兜底提示", exc_info=True)
+            return {"order_no": None, "raw_result": _ORDER_SERVICE_UNAVAILABLE}
         logger.info("[工作流] 订单查询结果：order_no=%s", order.orderNo)
         return {"order_no": order.orderNo, "raw_result": order.model_dump_json()}
 
@@ -117,6 +127,9 @@ class CustomerServiceWorkflow:
         """把订单/投诉的原始结果润色成友好话术。"""
         intent = Intent.parse(state.get("intent", ""))
         if intent == Intent.QUERY_ORDER:
+            # 订单服务不可用时直接返回兜底文案，不再调用润色
+            if state["raw_result"] == _ORDER_SERVICE_UNAVAILABLE:
+                return {"answer": _ORDER_SERVICE_UNAVAILABLE}
             answer = await self._polisher.polish(
                 "把订单对象信息整理成友好客服话术返回给用户",
                 f"用户问题：{state['user_query']}，订单信息：{state['raw_result']}",
