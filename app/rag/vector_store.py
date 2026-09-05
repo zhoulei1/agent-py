@@ -145,7 +145,10 @@ class HybridVectorStore:
             limit=k,
         )
         return [
-            Document(page_content=hit.payload["page_content"], metadata={"score": hit.score})
+            Document(
+                page_content=hit.payload["page_content"],
+                metadata={"score": hit.score, "pid": hit.id},
+            )
             for hit in results.points
         ]
 

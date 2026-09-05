@@ -1,42 +1,30 @@
 """稠密向量（bge）+ Qdrant 的入库与检索测试。
 
 入库数据源：tests/init.docx 与 tests/init.pdf。
+公共初始化逻辑（向量模型 / 客户端 / 文档片段加载）已抽离到 init_data.py 复用。
 """
 
+import sys
 import unittest
 from pathlib import Path
 
-from langchain_community.document_loaders import Docx2txtLoader, PyPDFLoader
-from langchain_huggingface import HuggingFaceEmbeddings
+sys.path.insert(0, str(Path(__file__).resolve().parent))        # tests/（同目录模块）
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # 项目根目录（app 包）
+
 from langchain_qdrant import QdrantVectorStore
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 
-# 测试资源目录（tests/）
-DATA_DIR = Path(__file__).parent
-# 本地 bge 稠密向量模型路径
-EMBEDDING_MODEL_PATH = "D:/gitwork/bge-small-zh-v1.5"
+from init_data import build_client, build_dense_embeddings, load_chunks
+
 COLLECTION_NAME = "bge-small-zh-v1.5-search-test"
-
-
-def _load_chunks() -> list:
-    """从 docx / pdf 读取文档并切分，返回片段列表。"""
-    docs = Docx2txtLoader(str(DATA_DIR / "init.docx")).load()
-    docs += PyPDFLoader(str(DATA_DIR / "init.pdf")).load()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
-    return splitter.split_documents(docs)
 
 
 class MyTestCase(unittest.TestCase):
     def setUp(self):
         """创建向量模型、Qdrant 客户端、集合与向量库。"""
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name=EMBEDDING_MODEL_PATH,
-            model_kwargs={'device': 'cpu'},
-            encode_kwargs={'normalize_embeddings': True},
-        )
-        self.client = QdrantClient(url="http://localhost:6333", api_key=None)
+        self.embeddings = build_dense_embeddings()
+        self.client: QdrantClient = build_client()
         if not self.client.collection_exists(COLLECTION_NAME):
             self.client.create_collection(
                 collection_name=COLLECTION_NAME,
@@ -51,7 +39,7 @@ class MyTestCase(unittest.TestCase):
 
     def test_ingest_and_search(self):
         """入库：把 docx / pdf 写入向量库，再检索验证。"""
-        chunks = _load_chunks()
+        chunks = load_chunks()
         self.assertGreater(len(chunks), 0, "未从 docx/pdf 读取到内容，请确认文件非空")
 
         # 清空旧数据后重新入库，保证测试可重复
